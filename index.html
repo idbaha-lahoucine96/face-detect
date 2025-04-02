@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système avancé de reconnaissance faciale</title>
+    <!-- Inclusion de la bibliothèque face-api.js pour la reconnaissance faciale -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="Assets/css/index.css">
+</head>
+
+<body>
+    <div class="menu-btn" id="menuBtn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3 class="sidebar-title">Paramètres du système</h3>
+            <button class="close-sidebar" id="closeSidebar">&times;</button>
+        </div>
+        <div class="settings-form">
+            <div class="feature-toggle">
+                <span>Détection automatique des visages</span>
+                <label class="toggle">
+                    <input type="checkbox" id="autoDetectionToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="feature-toggle">
+                <span>Afficher les marques du visage</span>
+                <label class="toggle">
+                    <input type="checkbox" id="landmarksToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="feature-toggle">
+                <span>Suivi des visages</span>
+                <label class="toggle">
+                    <input type="checkbox" id="trackingToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <button class="btn btn-primary ripple" id="resetSettings" style="width: 100%; margin-top: 20px;">
+                Réinitialiser les paramètres
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Système de reconnaissance faciale</h1>
+            <p class="subtitle">Système évolué pour reconnaître et faire correspondre les visages avec une base de
+                données avec une grande précision</p>
+        </header>
+
+        <div id="loadingModels" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Chargement des modèles de reconnaissance faciale... <span id="loadingProgress">0%</span></p>
+            <progress id="modelLoadingBar" value="0" max="100"></progress>
+            <p style="color: var(--text-light); font-size: 14px;">Ce processus peut prendre quelques minutes selon la
+                vitesse de votre connexion Internet</p>
+        </div>
+
+        <div id="appContent" style="display: none;">
+            <div class="stats">
+                <div class="stat-card">
+                    <h3 id="detectionCount">0</h3>
+                    <p>Détections</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="matchCount">0</h3>
+                    <p>Correspondances</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="accuracyRate">0%</h3>
+                    <p>Taux de précision</p>
+                </div>
+            </div>
+
+            <div id="alertMessage" style="display: none;"></div>
+
+            <div class="app-container">
+                <div class="left-panel">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>Caméra de reconnaissance faciale</span>
+                            <span id="cameraStatus" class="badge badge-live">En direct</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="video-container">
+                                <video id="video" autoplay muted playsinline></video>
+                                <canvas id="canvas"></canvas>
+                            </div>
+
+                            <div class="camera-controls">
+                                <select id="cameraSelect" class="camera-select">
+                                    <option value="">-- Sélectionner une caméra --</option>
+                                </select>
+                                <div class="dropdown">
+                                    <button class="btn btn-neutral ripple">Options de la caméra</button>
+                                    <div class="dropdown-content">
+                                        <div class="dropdown-item" id="toggleDetection">Activer/Désactiver la détection
+                                            automatique</div>
+                                        <div class="dropdown-item" id="toggleFaceTracking">Activer/Désactiver le suivi
+                                            des visages</div>
+                                        <div class="dropdown-item" id="toggleLandmarks">Afficher/Masquer les marques du
+                                            visage</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="controls">
+                                <button id="startBtn" class="btn btn-primary ripple">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path d="M23 7l-7 5 7 5V7z"></path>
+                                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                    </svg>
+                                    Activer la caméra
+                                </button>
+                                <button id="captureBtn" class="btn btn-success ripple" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path
+                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                                        </path>
+                                        <circle cx="12" cy="13" r="4"></circle>
+                                    </svg>
+                                    Capturer une image
+                                </button>
+                                <button id="stopBtn" class="btn btn-danger ripple" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
+                                    </svg>
+                                    Désactiver la caméra
+                                </button>
+                            </div>
+
+                            <img id="snapshotPreview" alt="Capture d'image">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
+                            Détails de la reconnaissance faciale
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-container">
+                                <div class="tabs">
+                                    <div class="tab active" data-tab="faceInfo">Informations du visage</div>
+                                    <div class="tab" data-tab="faceExpressions">Expressions faciales</div>
+                                    <div class="tab" data-tab="faceDescriptor">Descripteur du visage</div>
+                                </div>
+
+                                <div id="faceInfo" class="tab-content active">
+                                    <div class="detection-results">
+                                        <div class="detection-item">
+                                            <span class="detection-label">Statut de détection:</span>
+                                            <span id="detectionStatus" class="detection-value">Non détecté</span>
+                                        </div>
+                                        <div class="detection-item">
+                                            <span class="detection-label">Nombre de visages:</span>
+                                            <span id="faceCount" class="detection-value">0</span>
+                                        </div>
+                                        <div class="detection-item">
+                                            <span class="detection-label">Âge estimé:</span>
+                                            <span id="faceAge" class="detection-value">Non disponible</span>
+                                        </div>
+                                        <div class="detection-item">
+                                            <span class="detection-label">Genre:</span>
+                                            <span id="faceGender" class="detection-value">Non disponible</span>
+                                        </div>
+                                        <div class="detection-item">
+                                            <span class="detection-label">Confiance:</span>
+                                            <span id="detectionConfidence" class="detection-value">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="faceExpressions" class="tab-content">
+                                    <div class="face-expressions">
+                                        <div class="expression-item">
+                                            Heureux
+                                            <div class="expression-level">
+                                                <div id="expressionHappy" class="expression-fill" style="width: 0%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="expression-item">
+                                            Triste
+                                            <div class="expression-level">
+                                                <div id="expressionSad" class="expression-fill" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="expression-item">
+                                            En col
+                                            <div class="expression-level">
+                                                <div id="expressionAngry" class="expression-fill" style="width: 0%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="expression-item">
+                                            Surpris
+                                            <div class="expression-level">
+                                                <div id="expressionSurprised" class="expression-fill" style="width: 0%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="expression-item">
+                                            Neutre
+                                            <div class="expression-level">
+                                                <div id="expressionNeutral" class="expression-fill" style="width: 0%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="expression-item">
+                                            Peur
+                                            <div class="expression-level">
+                                                <div id="expressionFearful" class="expression-fill" style="width: 0%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="expression-item">
+                                            Dégoûté
+                                            <div class="expression-level">
+                                                <div id="expressionDisgusted" class="expression-fill" style="width: 0%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="faceDescriptor" class="tab-content">
+                                    <p>Descripteur du visage détecté (valeurs numériques du réseau neuronal):</p>
+                                    <div id="descriptorValues" class="face-descriptor">Aucun descripteur de visage
+                                        détecté pour le moment.
+                                    </div>
+                                    <button id="copyDescriptor" class="btn btn-neutral ripple"
+                                        style="margin-top: 10px; display: none;">
+                                        Copier le descripteur
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-panel">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>Profils enregistrés</span>
+                            <button id="verifyBtn" class="btn btn-primary ripple" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                Vérifier la correspondance
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="profiles" id="profilesContainer">
+                                <!-- Les profils seront générés dynamiquement ici -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Résultats de correspondance</div>
+                        <div class="card-body">
+                            <div id="matchResult" class="alert" style="display: none;"></div>
+
+                            <div class="tab-container">
+                                <div class="tabs">
+                                    <div class="tab active" data-tab="matchDetails">Détails de correspondance</div>
+                                    <div class="tab" data-tab="matchHistory">Historique des correspondances</div>
+                                </div>
+
+                                <div id="matchDetails" class="tab-content active">
+                                    <div class="detection-results">
+                                        <div class="detection-item">
+                                            <span class="detection-label">Statut de correspondance:</span>
+                                            <span id="matchStatus" class="detection-value">Aucune correspondance
+                                                effectuée</span>
+                                        </div>
+                                        <div class="detection-item">
+                                            <span class="detection-label">Personne correspondante:</span>
+                                            <span id="matchedPerson" class="detection-value">-</span>
+                                        </div>
+                                        <div class="detection-item">
+                                            <span class="detection-label">Taux de correspondance:</span>
+                                            <span id="matchConfidence" class="detection-value">0%</span>
+                                        </div>
+                                        <div class="detection-item">
+                                            <span class="detection-label">Date et heure de correspondance:</span>
+                                            <span id="matchDateTime" class="detection-value">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="matchHistory" class="tab-content">
+                                    <div id="historyContainer" class="snapshot-grid">
+                                        <!-- L'historique des correspondances sera généré dynamiquement ici -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faceapi-info">
+                <p>Ce système utilise la bibliothèque avancée <strong>face-api.js</strong> pour la reconnaissance
+                    faciale utilisant des techniques d'intelligence artificielle</p>
+            </div>
+        </div>
+
+        <div id="toast" class="toast"></div>
+    </div>
+    <script src="Assets/js/index.js"></script>
+</body>
+</html>
